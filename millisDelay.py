@@ -28,7 +28,7 @@
 # Written by W.J.M. Nelis, wim.nelis@ziggo.nl, 2020.07
 #
 # To do:
-# - include an initial delay
+# - Include an initial delay
 #
 import machine
 import time
@@ -67,7 +67,7 @@ class millisDelay():
  # therefore not used.
  #
   def _md_add_timer( self ):
-#   print( 'a0', millisDelay.cvmd_lst_task, self.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
+#   print( 'a0', time.ticks_ms(), millisDelay.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
     assert millisDelay.cvmd_lst_task<millisDelay.cvmd_max_task, "Task timer table overflow"
 
     if millisDelay.cvmd_lst_task == 0:
@@ -82,14 +82,14 @@ class millisDelay():
           millisDelay.cvmd_wait_time[i]= self.TimeEnd
           break
     millisDelay.cvmd_lst_task+= 1
-#  print( 'a1', millisDelay.cvmd_lst_task, self.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
+#   print( 'a1', time.ticks_ms(), millisDelay.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
 
  #
  # Private method _md_remove_timer removes an expired (?) timer from the list of
  # active timers.
  #
   def _md_remove_timer( self ):
-#   print( 'r0', millisDelay.cvmd_lst_task, self.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
+#   print( 'r0', time.ticks_ms(), millisDelay.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
     assert millisDelay.cvmd_lst_task>0, "Task timer table empty"
     assert self.TimeEnd in millisDelay.cvmd_wait_time, "Entry to delete is gone"
 
@@ -100,7 +100,7 @@ class millisDelay():
           millisDelay.cvmd_wait_time[j]= millisDelay.cvmd_wait_time[j+1]
         millisDelay.cvmd_wait_time[millisDelay.cvmd_lst_task]= None
         break
-#   print( 'r1', millisDelay.cvmd_lst_task, self.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
+#   print( 'r1', time.ticks_ms(), millisDelay.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
 
  #
  # Private method _md_try_to_sleep checks the time remaining until the next
@@ -108,8 +108,7 @@ class millisDelay():
  # is invoked to wait until 1 [ms] before the timer expiration. (A part of) the
  # last millisecond is spent looping until the timer is really expired. Method
  # lightsleep will reduce the power consumption slightly while waiting. Using
- # method lightsleep seems to reduce the current with about 0.5 [mA] on an
- # ESP8266.
+ # method lightsleep seems to reduce the current with about 0.5 [mA].
  #
   def _md_try_to_sleep( self ):
     assert millisDelay.cvmd_lst_task>0, "Task timer table empty"
@@ -191,4 +190,3 @@ class millisDelay():
       self.running  = False
       self.finishNow= False
       self._md_remove_timer()
-
