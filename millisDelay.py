@@ -17,18 +17,20 @@
 #    while True:
 #      DoSomething()
 #
-# The class maintains a list of times at which a timer will expire. Assuming
-# that all I/O is performed using blocking I/O-calls, and assuming that all
+# The class maintains a list of times at which timers will expire. Assuming that
+# all I/O is performed using blocking I/O-calls, and assuming that all
 # sleep-like calls use this class, it is possible to minimise power consumption
 # by using function machine.lightsleep to wait for the next timer to expire.
+#
+# NOTE: Do not use a timer of class millisDelay in an interrupt service routine
+#       (ISR). I did not find a way to combine a (re)start() in an ISR with a
+#       stop() in the main loop, the latter using machine.(dis|en)able_irq(), to
+#       make the named methods of class millisDelay both atomic and fast.
 #
 # This class is a rewrite of the C++ class millisDelay written by the Forward
 # Computing and Control Pty. Ltd., www.forward.com.au.
 #
 # Written by W.J.M. Nelis, wim.nelis@ziggo.nl, 2020.07
-#
-# To do:
-# - Include an initial delay
 #
 import machine
 import time
@@ -47,12 +49,13 @@ class millisDelay():
  #
  # Method __init__ presets the instance variables.
  #
-  def __init__( self ):
-    self.TimePeriod= 0
+  def __init__( self, allowSleep=False ):
+    self.TimePeriod= -1
     self.TimeStart = None
     self.TimeEnd   = None
     self.running   = False
     self.finishNow = False
+    self.Sleepy    = allowSleep
 
  #
  # Define the methods to manage list cvmd_wait_time.
@@ -63,8 +66,8 @@ class millisDelay():
  # is sorted on expiration time.
  # This data structure will change quite often. In order to minimise the number
  # of object constructions and destructions, the list has a fixed length.
- # Methods causing a dynamic list length, such as slicing and list.insert, are
- # therefore not used.
+ # Methods resulting in a dynamic list length, such as slicing and list.insert,
+ # are therefore not used.
  #
   def _md_add_timer( self ):
 #   print( 'a0', time.ticks_ms(), millisDelay.cvmd_lst_task, millisDelay.cvmd_wait_time )  # TEST
@@ -107,8 +110,7 @@ class millisDelay():
  # timer expiration. If this time is 2 [ms] or more, method machine.lightsleep
  # is invoked to wait until 1 [ms] before the timer expiration. (A part of) the
  # last millisecond is spent looping until the timer is really expired. Method
- # lightsleep will reduce the power consumption slightly while waiting. Using
- # method lightsleep seems to reduce the current with about 0.5 [mA].
+ # lightsleep will reduce the power consumption slightly while waiting.
  #
   def _md_try_to_sleep( self ):
     assert millisDelay.cvmd_lst_task>0, "Task timer table empty"
@@ -129,7 +131,7 @@ class millisDelay():
     return True if time.ticks_diff(time.ticks_ms(),self.TimeEnd) >= 0 else False
 
  #
- # Method finish will cause the timer to expire immediatly and thus cause an
+ # Method finish will cause the timer to expire immediately and thus cause an
  # expiration event in the very near future.
  #
   def finish( self ):
@@ -148,7 +150,8 @@ class millisDelay():
       self.stop()
       return True
     else:
-      self._md_try_to_sleep()
+      if self.Sleepy:
+        self._md_try_to_sleep()
       return False
 
  #
@@ -156,7 +159,7 @@ class millisDelay():
  # (re)start invocation. This method is intended to schedule periodic actions.
  #
   def repeat( self ):
-    assert self.TimePeriod > 2, "Start not invoked yet"
+    assert self.TimePeriod >= 0, "Start not invoked yet"
     assert not self.running, "Can't repeat running timer"
   #
     self.TimeStart= time.ticks_add( self.TimeStart, self.TimePeriod )
@@ -164,11 +167,15 @@ class millisDelay():
     self.running  = True
     self._md_add_timer()
 
+ #
+ # Method restart starts the timer again starting now.  Note: use repeat() when
+ # justFinished() returns true, if you want a regular repeating delay.
+ #
   def restart( self ):
     self.start( self.TimePeriod )
 
   def start( self, Period ):
-    assert Period > 2, "Time period is too small"
+    assert Period >= 0, "Time period is too small"
   # assert Period < 1000000000, "Time period is too large"
   #
     if self.running:
@@ -190,3 +197,11 @@ class millisDelay():
       self.running  = False
       self.finishNow= False
       self._md_remove_timer()
+
+  @property
+  def maySleep( self ):
+    return self.Sleepy
+
+  @maySleep.setter
+  def maySleep( self, val ):
+    self.Sleepy= val  if isinstance(val,bool)  else False
