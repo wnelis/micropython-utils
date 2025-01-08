@@ -14,8 +14,3 @@ every 300 seconds. Class millisDelay maintains a list of times at which timers
 will expire. Whenever possible, it will invoke method machine.lightsleep() to
 wait until the next timer will expire.
 
-# watchdog
-Module watchdog.py implements a simple watchdog timer, which can be started,
-stopped and reset (restarted). If the timer expires, the supplied call back
-function is invoked.
-
