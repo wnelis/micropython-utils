@@ -25,7 +25,6 @@ class Delay_ms:
         self._args = args
         self._durn = duration  # Default duration
         self._retn = None  # Return value of launched callable
-        self._tbeg = None  # Start time (absolute ms)
         self._tper =   -1  # Repeater period [ms]
         self._tend = None  # Stop time (absolute ms).
         self._busy = False
@@ -57,9 +56,8 @@ class Delay_ms:
     def trigger(self, duration=0):  # Update absolute end time, 0-> ctor default
         if self._mtask is None:
             raise RuntimeError("Delay_ms.deinit() has run.")
-        self._tbeg = ticks_ms()  # Now
         self._tper = duration  if duration > 0  else self._durn
-        self._tend = ticks_add(self._tbeg, self._tper)
+        self._tend = ticks_add(ticks_ms(), self._tper)
         self._retn = None  # Default in case cancelled.
         self._busy = True
         self._trig.set()
@@ -68,10 +66,9 @@ class Delay_ms:
         assert not self._busy, "Can't repeat a running timer"
         assert self._tper > 0, "Trigger not invoked yet"
 #       now= ticks_ms()  # Handle tasks running longer dan _tper [ms]
-#       while ticks_diff(now, self._tbeg) > 2*self._per:
-#           self._tbeg = ticks_add(self._tbeg, self._tper)
-        self._tbeg = ticks_add(self._tbeg, self._tper)
-        self._tend = ticks_add(self._tbeg, self._tper)
+#       while ticks_diff(now, self._tend) > self._per:
+#           self._tend = ticks_add(self._tend, self._tper)
+        self._tend = ticks_add(self._tend, self._tper)
         self._busy = True
         self._tout.clear()
         self._trig.set()
